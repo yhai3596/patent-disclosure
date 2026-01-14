@@ -6,7 +6,8 @@
   "permissions": [
     "storage",
     "downloads",
-    "activeTab"
+    "activeTab",
+    "contextMenus"
   ],
   "host_permissions": [],
   "action": {
@@ -20,8 +21,7 @@
     }
   },
   "background": {
-    "service_worker": "js/background.js",
-    "type": "module"
+    "service_worker": "js/background.js"
   },
   "content_scripts": [
     {
