@@ -1322,15 +1322,131 @@ class DisclosureAssistant {
 
             const result = await aiService.optimizeContent('fullDocument', this.generatedDocument);
 
-            // 显示优化结果对话框
-            this.showAIResultDialog('AI优化建议', result);
+            // 解析优化结果
+            let resultData;
+            try {
+                resultData = this.parseAIResponse(result);
+            } catch (parseError) {
+                console.error('JSON解析失败:', parseError);
+                resultData = {
+                    summary: this.formatRawTextResponse(result),
+                    parseError: true
+                };
+            }
 
+            // 显示优化结果对话框
+            this.showAIOptimizeDialog(resultData);
             this.updateStatus('优化完成');
         } catch (error) {
             this.showToast('AI优化失败: ' + error.message, 'error');
         } finally {
             this.showLoading(false);
         }
+    }
+
+    /**
+     * 显示AI优化对话框
+     */
+    showAIOptimizeDialog(resultData) {
+        const dialog = document.createElement('div');
+        dialog.className = 'ai-result-panel show';
+
+        const title = resultData.parseError ? 'AI优化建议（原始文本）' : 'AI优化建议';
+        const hasOptimized = resultData.optimized && !resultData.parseError;
+
+        dialog.innerHTML = `
+            <div class="ai-result-content" style="max-width: 600px;">
+                <h3>${title}</h3>
+                ${this.formatAIOptimizeResult(resultData)}
+                <div class="ai-result-actions">
+                    <button class="action-btn" onclick="this.closest('.ai-result-panel').remove()">关闭</button>
+                    ${hasOptimized ? '<button class="action-btn ai-optimize-btn" id="apply-optimized">应用优化版本</button>' : ''}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(dialog);
+
+        // 应用优化版本按钮
+        const applyBtn = dialog.querySelector('#apply-optimized');
+        if (applyBtn) {
+            applyBtn.addEventListener('click', () => {
+                this.generatedDocument = resultData.optimized;
+                this.displayPreview(this.generatedDocument);
+                this.showToast('已应用AI优化版本', 'success');
+                dialog.remove();
+            });
+        }
+
+        // 点击背景关闭
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) {
+                dialog.remove();
+            }
+        });
+    }
+
+    /**
+     * 格式化AI优化结果
+     */
+    formatAIOptimizeResult(resultData) {
+        let html = '';
+
+        // 显示评分
+        if (resultData.score) {
+            const score = resultData.score;
+            const scoreColor = score >= 80 ? 'var(--success-color)' : score >= 60 ? 'var(--warning-color)' : 'var(--danger-color)';
+            html += `<div class="ai-result-item">
+                <strong>当前评分:</strong>
+                <span style="color: ${scoreColor}; font-weight: 600; font-size: 18px;">${score}/100</span>
+            </div>`;
+        }
+
+        // 显示问题列表
+        if (resultData.issues && resultData.issues.length > 0) {
+            html += '<div class="ai-result-section">';
+            html += '<h4>📋 发现的问题</h4>';
+            resultData.issues.forEach(issue => {
+                html += `<div class="ai-result-item error">
+                    <p>• ${issue}</p>
+                </div>`;
+            });
+            html += '</div>';
+        }
+
+        // 显示建议
+        if (resultData.suggestions && resultData.suggestions.length > 0) {
+            html += '<div class="ai-result-section">';
+            html += '<h4>💡 优化建议</h4>';
+            resultData.suggestions.forEach(suggestion => {
+                html += `<div class="ai-result-item suggestion">
+                    <p>• ${suggestion}</p>
+                </div>`;
+            });
+            html += '</div>';
+        }
+
+        // 显示优化后的内容
+        if (resultData.optimized) {
+            html += '<div class="ai-result-section">';
+            html += '<h4>✨ 优化后内容</h4>';
+            html += `<div class="ai-result-item">
+                <div style="max-height: 300px; overflow-y: auto; background: var(--bg-secondary); padding: 12px; border-radius: 4px; white-space: pre-wrap; font-size: 12px; line-height: 1.6;">${resultData.optimized}</div>
+            </div>`;
+            html += '</div>';
+        }
+
+        // 解析失败时显示原始内容
+        if (resultData.parseError && resultData.summary) {
+            html += '<div class="ai-result-section">';
+            html += '<p style="color: var(--warning-color);">⚠️ JSON解析失败，显示原始内容</p>';
+            html += `<div class="ai-result-item">
+                <div style="white-space: pre-wrap; font-size: 12px; line-height: 1.6;">${resultData.summary}</div>
+            </div>`;
+            html += '</div>';
+        }
+
+        return html || '<p>无优化结果</p>';
     }
 
     /**
@@ -1352,9 +1468,14 @@ class DisclosureAssistant {
             // 解析审核结果
             let resultData;
             try {
-                resultData = JSON.parse(reviewResult);
-            } catch {
-                resultData = { summary: reviewResult };
+                resultData = this.parseAIResponse(reviewResult);
+            } catch (parseError) {
+                console.error('JSON解析失败:', parseError);
+                // 解析失败时，将原始文本作为summary显示
+                resultData = {
+                    summary: this.formatRawTextResponse(reviewResult),
+                    parseError: true
+                };
             }
 
             this.showAIReviewDialog(resultData);
@@ -1364,6 +1485,43 @@ class DisclosureAssistant {
         } finally {
             this.showLoading(false);
         }
+    }
+
+    /**
+     * 解析AI响应，提取JSON内容
+     */
+    parseAIResponse(response) {
+        let cleanedResponse = response.trim();
+
+        // 尝试提取markdown代码块中的JSON
+        const jsonCodeBlockMatch = cleanedResponse.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+        if (jsonCodeBlockMatch) {
+            cleanedResponse = jsonCodeBlockMatch[1];
+        }
+
+        // 尝试提取纯JSON（寻找{...}）
+        const jsonObjectMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+        if (jsonObjectMatch) {
+            cleanedResponse = jsonObjectMatch[0];
+        }
+
+        return JSON.parse(cleanedResponse);
+    }
+
+    /**
+     * 格式化原始文本响应
+     */
+    formatRawTextResponse(text) {
+        // 移除markdown代码块标记
+        let cleaned = text.replace(/```(?:json)?\s*\n?/g, '').replace(/```\s*$/g, '');
+
+        // 如果是纯文本，直接返回
+        if (!cleaned.includes('{') || !cleaned.includes('}')) {
+            return cleaned;
+        }
+
+        // 尝试提取有用信息
+        return cleaned;
     }
 
     /**
@@ -1416,14 +1574,6 @@ class DisclosureAssistant {
     }
 
     /**
-     * 显示AI结果对话框
-     */
-    showAIResultDialog(title, content) {
-        // 简单实现，后续可以优化为模态对话框
-        this.showAIReviewDialog({ summary: content });
-    }
-
-    /**
      * 显示AI审核对话框
      */
     showAIReviewDialog(resultData) {
@@ -1465,9 +1615,37 @@ class DisclosureAssistant {
     formatAIReviewResult(resultData) {
         let html = '';
 
+        // 如果解析失败，显示格式化的原始文本
+        if (resultData.parseError) {
+            html += '<div class="ai-result-section">';
+            html += '<p style="color: var(--warning-color); margin-bottom: 12px;">⚠️ JSON解析失败，显示原始内容</p>';
+
+            // 尝试美化显示原始文本
+            const summary = resultData.summary || '';
+            if (summary.includes('总分') || summary.includes('评分') || summary.includes('问题')) {
+                // 看起来像结构化内容，尝试分段显示
+                const lines = summary.split('\n').filter(line => line.trim());
+                html += '<div class="ai-result-item">';
+                lines.forEach(line => {
+                    if (line.includes('总分') || line.includes('【') || line.includes('】')) {
+                        html += `<p style="font-weight: 600; margin-top: 8px; color: var(--primary-color);">${line}</p>`;
+                    } else {
+                        html += `<p style="margin: 4px 0;">${line}</p>`;
+                    }
+                });
+                html += '</div>';
+            } else {
+                // 纯文本，直接显示
+                html += `<div class="ai-result-item"><p style="white-space: pre-wrap;">${summary}</p></div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        // 正常的结构化数据
         if (resultData.scores) {
             html += '<div class="ai-result-section">';
-            html += '<h4>评分详情</h4>';
+            html += '<h4>📊 评分详情</h4>';
             for (const [category, score] of Object.entries(resultData.scores)) {
                 const categoryNames = {
                     basicInfo: '基本信息',
@@ -1477,8 +1655,10 @@ class DisclosureAssistant {
                     quality: '文档质量',
                     format: '格式规范'
                 };
+                const scoreColor = score >= 20 ? 'var(--success-color)' : score >= 15 ? 'var(--warning-color)' : 'var(--danger-color)';
                 html += `<div class="ai-result-item">
-                    <strong>${categoryNames[category] || category}:</strong> ${score}/25
+                    <strong>${categoryNames[category] || category}:</strong>
+                    <span style="color: ${scoreColor}; font-weight: 600;">${score}/25</span>
                 </div>`;
             }
             html += '</div>';
@@ -1486,22 +1666,27 @@ class DisclosureAssistant {
 
         if (resultData.issues && resultData.issues.length > 0) {
             html += '<div class="ai-result-section">';
-            html += '<h4>问题列表</h4>';
-            resultData.issues.forEach(issue => {
+            html += '<h4>📋 问题列表</h4>';
+            resultData.issues.forEach((issue, index) => {
+                const levelEmoji = {
+                    error: '❌',
+                    warning: '⚠️',
+                    suggestion: '💡'
+                };
                 html += `<div class="ai-result-item ${issue.level}">
-                    <strong>[${issue.level}] ${issue.category}:</strong>
-                    <p>${issue.message}</p>
-                    ${issue.suggestion ? `<p><strong>建议:</strong> ${issue.suggestion}</p>` : ''}
+                    <p><strong>${levelEmoji[issue.level] || ''} [${issue.level}] ${issue.category}</strong></p>
+                    <p style="margin: 4px 0;">${issue.message}</p>
+                    ${issue.suggestion ? `<p style="margin: 8px 0 0 0; color: var(--primary-color);"><strong>✨ 建议:</strong> ${issue.suggestion}</p>` : ''}
                 </div>`;
             });
             html += '</div>';
         }
 
         if (resultData.summary) {
-            html += `<div class="ai-result-item suggestion">
-                <strong>总体评价:</strong>
-                <p>${resultData.summary}</p>
-            </div>`;
+            html += '<div class="ai-result-section">';
+            html += '<h4>📝 总体评价</h4>';
+            html += `<div class="ai-result-item suggestion"><p>${resultData.summary}</p></div>`;
+            html += '</div>';
         }
 
         return html || '<p>无审核结果</p>';
