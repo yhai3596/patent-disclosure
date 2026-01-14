@@ -24,6 +24,8 @@ class DisclosureAssistant {
             this.setupEventListeners();
             this.loadSavedData();
             this.updateStepIndicator();
+            // 初始化AI服务
+            await this.initAIService();
             this.showToast('专利技术交底书助手已启动', 'success');
         };
 
@@ -343,6 +345,8 @@ class DisclosureAssistant {
             });
 
             if (response.success) {
+                // 保存生成的文档内容，供AI功能使用
+                this.generatedDocument = response.data;
                 this.displayPreview(response.data);
                 this.showToast('文档生成成功', 'success');
                 this.switchTab('preview');
@@ -1143,9 +1147,10 @@ class DisclosureAssistant {
         try {
             await aiService.init();
             await this.loadAISettings();
-            this.updateAIUI();
+            await this.updateAIUI();
         } catch (error) {
-            console.error('AI服务初始化失败:', error);
+            // AI初始化失败不影响插件使用
+            console.warn('AI服务未配置，AI功能将不可用');
         }
     }
 
@@ -1238,10 +1243,39 @@ class DisclosureAssistant {
     async updateAIUI() {
         const settings = await aiService.getSettings();
         const aiGenerateBtn = document.getElementById('ai-generate');
-        const aiEnabled = settings.apiKey && settings.enabled;
+        const aiChatPanel = document.getElementById('ai-chat-panel');
 
+        // AI智能生成按钮：有API Key且启用时显示
         if (aiGenerateBtn) {
+            const aiEnabled = settings.apiKey && settings.enabled;
             aiGenerateBtn.style.display = aiEnabled ? 'inline-block' : 'none';
+        }
+
+        // 更新提供商选择
+        const providerSelect = document.getElementById('ai-provider');
+        if (providerSelect && settings.provider) {
+            providerSelect.value = settings.provider;
+        }
+
+        // 更新模型选择
+        if (settings.model) {
+            this.handleAIProviderChange(settings.provider || 'zhipu');
+            const modelSelect = document.getElementById('ai-model');
+            if (modelSelect) {
+                modelSelect.value = settings.model;
+            }
+        }
+
+        // 更新API Key
+        const apiKeyInput = document.getElementById('ai-api-key');
+        if (apiKeyInput && settings.apiKey) {
+            apiKeyInput.value = settings.apiKey;
+        }
+
+        // 更新启用状态
+        const enabledCheckbox = document.getElementById('ai-enabled');
+        if (enabledCheckbox && settings.enabled !== undefined) {
+            enabledCheckbox.checked = settings.enabled;
         }
     }
 
@@ -1254,11 +1288,13 @@ class DisclosureAssistant {
             this.showLoading(true);
             this.updateStatus('AI正在生成文档...');
 
-            const formData = this.collectFormData();
-            const content = await aiService.generateDraft(formData);
+            this.collectFormData();
+            const content = await aiService.generateDraft(this.formData);
 
+            // 保存生成的文档内容
             this.generatedDocument = content;
-            this.displayDocument(content);
+            this.displayPreview(content);
+            this.switchTab('preview');
 
             this.updateStatus('文档生成完成');
             this.showToast('AI文档生成成功', 'success');
