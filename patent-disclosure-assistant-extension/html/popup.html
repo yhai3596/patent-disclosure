@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专利技术交底书助手</title>
+    <link rel="stylesheet" href="../css/popup.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <header class="header">
+            <h1>专利技术交底书助手</h1>
+            <p class="subtitle">智能辅助撰写技术交底书</p>
+        </header>
+
+        <!-- 导航栏 -->
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-tab="collect">信息收集</button>
+            <button class="tab-btn" data-tab="preview">文档预览</button>
+            <button class="tab-btn" data-tab="manage">文档管理</button>
+            <button class="tab-btn" data-tab="settings">设置</button>
+        </nav>
+
+        <!-- 主内容区域 -->
+        <main class="main-content">
+            <!-- 信息收集标签页 -->
+            <section id="collect-tab" class="tab-content active">
+                <div class="step-indicator">
+                    <div class="step active">1</div>
+                    <div class="step">2</div>
+                    <div class="step">3</div>
+                    <div class="step">4</div>
+                </div>
+
+                <form id="disclosure-form" class="disclosure-form">
+                    <!-- 基本信息 -->
+                    <div class="form-section" data-step="1">
+                        <h3>基本信息</h3>
+                        <div class="form-group">
+                            <label for="document-title">文档标题 *</label>
+                            <input type="text" id="document-title" name="title" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="document-id">文档编号</label>
+                            <input type="text" id="document-id" name="documentId" placeholder="TD-YYYY-XXX">
+                        </div>
+                        <div class="form-group">
+                            <label for="technical-field">技术领域 *</label>
+                            <textarea id="technical-field" name="technicalField" rows="3" required placeholder="请描述本专利所属的技术领域"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="inventor">发明人 *</label>
+                            <input type="text" id="inventor" name="inventor" required>
+                        </div>
+                    </div>
+
+                    <!-- 背景技术 -->
+                    <div class="form-section" data-step="2">
+                        <h3>背景技术（发现问题）</h3>
+                        <div class="form-group">
+                            <label for="background-tech">现有技术现状 *</label>
+                            <textarea id="background-tech" name="backgroundTechnology" rows="4" required placeholder="描述相关技术的当前发展状况"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="current-problems">现有技术存在的问题 *</label>
+                            <textarea id="current-problems" name="currentProblems" rows="4" required placeholder="明确指出现有技术存在的问题、不足或局限性"></textarea>
+                        </div>
+                        <div class="help-text">
+                            <strong>提示：</strong>从效率、成本、精度、可靠性、适应性等角度分析问题
+                        </div>
+                    </div>
+
+                    <!-- 技术方案 -->
+                    <div class="form-section" data-step="3">
+                        <h3>技术方案（设计方案）</h3>
+                        <div class="form-group">
+                            <label for="technical-problem">要解决的技术问题 *</label>
+                            <textarea id="technical-problem" name="technicalProblem" rows="3" required placeholder="明确描述本专利要解决的技术问题"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="technical-solution">技术解决方案 *</label>
+                            <textarea id="technical-solution" name="technicalSolution" rows="5" required placeholder="详细描述本专利的技术方案，包括核心创新点"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="key-features">关键技术特征</label>
+                            <div id="key-features-list">
+                                <div class="feature-item">
+                                    <input type="text" placeholder="关键技术特征1" name="keyFeatures[]">
+                                    <button type="button" class="remove-feature">×</button>
+                                </div>
+                            </div>
+                            <button type="button" id="add-feature" class="add-btn">+ 添加技术特征</button>
+                        </div>
+                    </div>
+
+                    <!-- 技术效果 -->
+                    <div class="form-section" data-step="4">
+                        <h3>技术效果（技术效果）</h3>
+                        <div class="form-group">
+                            <label for="beneficial-effects">有益效果 *</label>
+                            <textarea id="beneficial-effects" name="beneficialEffects" rows="4" required placeholder="说明本专利带来的有益效果或优势"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="performance-data">性能提升数据</label>
+                            <textarea id="performance-data" name="performanceData" rows="3" placeholder="如有具体数据支持，请在此描述"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="embodiment-desc">具体实施方式</label>
+                            <textarea id="embodiment-desc" name="embodimentDescription" rows="4" placeholder="详细描述具体实施方式（可选）"></textarea>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- 表单导航按钮 -->
+                <div class="form-navigation">
+                    <button type="button" id="prev-step" class="nav-btn prev-btn" disabled>上一步</button>
+                    <button type="button" id="next-step" class="nav-btn next-btn">下一步</button>
+                    <button type="button" id="generate-doc" class="nav-btn generate-btn" style="display: none;">生成文档</button>
+                </div>
+            </section>
+
+            <!-- 文档预览标签页 -->
+            <section id="preview-tab" class="tab-content">
+                <div class="preview-header">
+                    <h3>文档预览</h3>
+                    <div class="preview-actions">
+                        <button id="edit-doc" class="action-btn edit-btn">编辑</button>
+                        <button id="quality-check" class="action-btn quality-btn">质量检查</button>
+                        <div class="dropdown">
+                            <button class="action-btn export-btn dropdown-btn">导出文档 ▼</button>
+                            <div class="dropdown-content">
+                                <a href="#" id="export-md">Markdown (.md)</a>
+                                <a href="#" id="export-html">HTML (.html)</a>
+                                <a href="#" id="export-pdf">PDF (.pdf)</a>
+                                <a href="#" id="export-txt">纯文本 (.txt)</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="document-preview" class="document-preview">
+                    <div class="preview-placeholder">
+                        <p>请先完成信息收集，生成文档后在此预览</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 文档管理标签页 -->
+            <section id="manage-tab" class="tab-content">
+                <div class="manage-header">
+                    <h3>文档管理</h3>
+                    <button id="new-doc" class="action-btn new-btn">新建文档</button>
+                </div>
+                <div id="doc-list" class="doc-list">
+                    <div class="empty-state">
+                        <p>暂无保存的文档</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 设置标签页 -->
+            <section id="settings-tab" class="tab-content">
+                <h3>设置</h3>
+                <div class="settings-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="auto-save" checked>
+                        <span class="checkmark"></span>
+                        自动保存
+                    </label>
+                    <p class="setting-desc">在输入时自动保存草稿</p>
+                </div>
+                <div class="settings-group">
+                    <label for="export-format">默认导出格式</label>
+                    <select id="export-format">
+                        <option value="markdown">Markdown (.md)</option>
+                        <option value="html">HTML (.html)</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label for="template-select">文档模板</label>
+                    <select id="template-select">
+                        <option value="default">默认模板</option>
+                        <option value="detailed">详细模板</option>
+                        <option value="simple">简化模板</option>
+                    </select>
+                </div>
+                <div class="settings-actions">
+                    <button id="clear-data" class="danger-btn">清除所有数据</button>
+                    <button id="export-settings" class="action-btn">导出设置</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- 状态栏 -->
+        <footer class="status-bar">
+            <span id="status-text">就绪</span>
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div id="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>正在处理...</p>
+    </div>
+
+    <!-- 消息提示 -->
+    <div id="toast" class="toast"></div>
+
+    <script src="../js/performance.js"></script>
+    <script src="../js/popup.js"></script>
+</body>
+</html>

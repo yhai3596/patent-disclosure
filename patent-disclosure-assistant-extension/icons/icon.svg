@@ -1,0 +1,23 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#3498db"/>
+
+  <!-- Document base -->
+  <rect x="32" y="24" width="64" height="88" rx="4" fill="#ffffff" opacity="0.95"/>
+
+  <!-- Document fold -->
+  <path d="M80 24 L80 40 L96 40 L96 24 L80 24 Z" fill="#2980b9"/>
+
+  <!-- Patent symbol (P) -->
+  <circle cx="64" cy="58" r="16" fill="none" stroke="#3498db" stroke-width="3"/>
+  <text x="64" y="65" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#3498db" text-anchor="middle">P</text>
+
+  <!-- Lines representing text -->
+  <line x1="40" y1="82" x2="88" y2="82" stroke="#bdc3c7" stroke-width="2" stroke-linecap="round"/>
+  <line x1="40" y1="90" x2="88" y2="90" stroke="#bdc3c7" stroke-width="2" stroke-linecap="round"/>
+  <line x1="40" y1="98" x2="72" y2="98" stroke="#bdc3c7" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Checkmark seal -->
+  <circle cx="100" cy="100" r="16" fill="#27ae60"/>
+  <path d="M92 100 L98 106 L108 94" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
