@@ -90,6 +90,82 @@ class DisclosureAssistant {
         document.getElementById('auto-save').addEventListener('change', (e) => this.saveSettings());
         document.getElementById('export-format').addEventListener('change', (e) => this.saveSettings());
         document.getElementById('template-select').addEventListener('change', (e) => this.saveSettings());
+
+        // AI功能设置
+        this.setupAIEventListeners();
+    }
+
+    /**
+     * 设置AI相关事件监听器
+     */
+    setupAIEventListeners() {
+        // AI提供商选择
+        const aiProvider = document.getElementById('ai-provider');
+        if (aiProvider) {
+            aiProvider.addEventListener('change', (e) => this.handleAIProviderChange(e.target.value));
+        }
+
+        // AI模型选择
+        const aiModel = document.getElementById('ai-model');
+        if (aiModel) {
+            aiModel.addEventListener('change', (e) => this.saveAISettings());
+        }
+
+        // API Key输入
+        const aiApiKey = document.getElementById('ai-api-key');
+        if (aiApiKey) {
+            aiApiKey.addEventListener('change', (e) => this.saveAISettings());
+        }
+
+        // 测试AI连接
+        const testAiBtn = document.getElementById('test-ai');
+        if (testAiBtn) {
+            testAiBtn.addEventListener('click', () => this.testAIConnection());
+        }
+
+        // AI启用开关
+        const aiEnabled = document.getElementById('ai-enabled');
+        if (aiEnabled) {
+            aiEnabled.addEventListener('change', (e) => this.saveAISettings());
+        }
+
+        // AI智能生成按钮
+        const aiGenerateBtn = document.getElementById('ai-generate');
+        if (aiGenerateBtn) {
+            aiGenerateBtn.addEventListener('click', () => this.aiGenerateDocument());
+        }
+
+        // AI优化按钮
+        const aiOptimizeBtn = document.getElementById('ai-optimize');
+        if (aiOptimizeBtn) {
+            aiOptimizeBtn.addEventListener('click', () => this.aiOptimizeDocument());
+        }
+
+        // AI审核按钮
+        const aiReviewBtn = document.getElementById('ai-review');
+        if (aiReviewBtn) {
+            aiReviewBtn.addEventListener('click', () => this.aiReviewDocument());
+        }
+
+        // AI对话面板
+        const closeAiChat = document.getElementById('close-ai-chat');
+        if (closeAiChat) {
+            closeAiChat.addEventListener('click', () => this.toggleAIChat(false));
+        }
+
+        const aiChatSend = document.getElementById('ai-chat-send');
+        if (aiChatSend) {
+            aiChatSend.addEventListener('click', () => this.sendAIMessage());
+        }
+
+        const aiChatInput = document.getElementById('ai-chat-input-field');
+        if (aiChatInput) {
+            aiChatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.sendAIMessage();
+                }
+            });
+        }
     }
 
     /**
@@ -1054,6 +1130,353 @@ class DisclosureAssistant {
      */
     updateProgress(percentage) {
         document.getElementById('progress-fill').style.width = `${percentage}%`;
+    }
+
+    // ============================================================
+    // AI功能方法
+    // ============================================================
+
+    /**
+     * 初始化AI服务
+     */
+    async initAIService() {
+        try {
+            await aiService.init();
+            await this.loadAISettings();
+            this.updateAIUI();
+        } catch (error) {
+            console.error('AI服务初始化失败:', error);
+        }
+    }
+
+    /**
+     * 加载AI设置
+     */
+    async loadAISettings() {
+        return new Promise((resolve) => {
+            chrome.storage.sync.get(['aiProvider', 'aiApiKey', 'aiModel', 'aiEnabled'], (result) => {
+                if (result.aiProvider) {
+                    document.getElementById('ai-provider').value = result.aiProvider;
+                    this.handleAIProviderChange(result.aiProvider);
+                }
+                if (result.aiModel) {
+                    document.getElementById('ai-model').value = result.aiModel;
+                }
+                if (result.aiApiKey) {
+                    document.getElementById('ai-api-key').value = result.aiApiKey;
+                }
+                if (result.aiEnabled !== undefined) {
+                    document.getElementById('ai-enabled').checked = result.aiEnabled;
+                }
+                resolve();
+            });
+        });
+    }
+
+    /**
+     * 保存AI设置
+     */
+    async saveAISettings() {
+        const provider = document.getElementById('ai-provider').value;
+        const model = document.getElementById('ai-model').value;
+        const apiKey = document.getElementById('ai-api-key').value;
+        const enabled = document.getElementById('ai-enabled').checked;
+
+        await aiService.saveSettings(provider, apiKey, model);
+        await this.updateAIUI();
+        this.showToast('AI设置已保存', 'success');
+    }
+
+    /**
+     * 处理AI提供商变更
+     */
+    async handleAIProviderChange(provider) {
+        const models = aiService.getProviderInfo(provider)?.models || [];
+        const modelSelect = document.getElementById('ai-model');
+        modelSelect.innerHTML = models.map(model => `<option value="${model}">${model}</option>`).join('');
+    }
+
+    /**
+     * 测试AI连接
+     */
+    async testAIConnection() {
+        const provider = document.getElementById('ai-provider').value;
+        const model = document.getElementById('ai-model').value;
+        const apiKey = document.getElementById('ai-api-key').value;
+        const statusEl = document.getElementById('ai-status');
+
+        if (!apiKey) {
+            statusEl.textContent = '请先输入API Key';
+            statusEl.className = 'ai-status error';
+            return;
+        }
+
+        statusEl.textContent = '测试中...';
+        statusEl.className = 'ai-status loading';
+
+        try {
+            const result = await aiService.testConnection(provider, apiKey, model);
+            if (result.success) {
+                statusEl.textContent = '连接成功';
+                statusEl.className = 'ai-status success';
+                this.showToast('AI服务连接成功', 'success');
+            } else {
+                statusEl.textContent = '连接失败';
+                statusEl.className = 'ai-status error';
+                this.showToast('AI服务连接失败: ' + result.error, 'error');
+            }
+        } catch (error) {
+            statusEl.textContent = '连接失败';
+            statusEl.className = 'ai-status error';
+            this.showToast('连接测试出错: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * 更新AI相关UI
+     */
+    async updateAIUI() {
+        const settings = await aiService.getSettings();
+        const aiGenerateBtn = document.getElementById('ai-generate');
+        const aiEnabled = settings.apiKey && settings.enabled;
+
+        if (aiGenerateBtn) {
+            aiGenerateBtn.style.display = aiEnabled ? 'inline-block' : 'none';
+        }
+    }
+
+    /**
+     * AI智能生成文档
+     */
+    async aiGenerateDocument() {
+        try {
+            await this.initAIService();
+            this.showLoading(true);
+            this.updateStatus('AI正在生成文档...');
+
+            const formData = this.collectFormData();
+            const content = await aiService.generateDraft(formData);
+
+            this.generatedDocument = content;
+            this.displayDocument(content);
+
+            this.updateStatus('文档生成完成');
+            this.showToast('AI文档生成成功', 'success');
+        } catch (error) {
+            this.showToast('AI生成失败: ' + error.message, 'error');
+            console.error('AI生成错误:', error);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    /**
+     * AI优化文档
+     */
+    async aiOptimizeDocument() {
+        if (!this.generatedDocument) {
+            this.showToast('请先生成文档', 'warning');
+            return;
+        }
+
+        try {
+            await this.initAIService();
+            this.showLoading(true);
+            this.updateStatus('AI正在优化文档...');
+
+            const result = await aiService.optimizeContent('fullDocument', this.generatedDocument);
+
+            // 显示优化结果对话框
+            this.showAIResultDialog('AI优化建议', result);
+
+            this.updateStatus('优化完成');
+        } catch (error) {
+            this.showToast('AI优化失败: ' + error.message, 'error');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    /**
+     * AI审核文档
+     */
+    async aiReviewDocument() {
+        if (!this.generatedDocument) {
+            this.showToast('请先生成文档', 'warning');
+            return;
+        }
+
+        try {
+            await this.initAIService();
+            this.showLoading(true);
+            this.updateStatus('AI正在审核文档...');
+
+            const reviewResult = await aiService.reviewDocument(this.generatedDocument, this.formData);
+
+            // 解析审核结果
+            let resultData;
+            try {
+                resultData = JSON.parse(reviewResult);
+            } catch {
+                resultData = { summary: reviewResult };
+            }
+
+            this.showAIReviewDialog(resultData);
+            this.updateStatus('审核完成');
+        } catch (error) {
+            this.showToast('AI审核失败: ' + error.message, 'error');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    /**
+     * 发送AI对话消息
+     */
+    async sendAIMessage() {
+        const input = document.getElementById('ai-chat-input-field');
+        const message = input.value.trim();
+
+        if (!message) return;
+
+        // 显示用户消息
+        this.addChatMessage(message, 'user');
+        input.value = '';
+
+        try {
+            await this.initAIService();
+            const formData = this.collectFormData();
+            const response = await aiService.collectInformation(message, formData, aiService.getConversationHistory());
+
+            // 显示AI回复
+            this.addChatMessage(response, 'ai');
+        } catch (error) {
+            this.addChatMessage('抱歉，AI服务出现错误: ' + error.message, 'ai');
+        }
+    }
+
+    /**
+     * 添加聊天消息
+     */
+    addChatMessage(message, type) {
+        const messagesContainer = document.getElementById('ai-chat-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `ai-message ${type === 'user' ? 'user-message' : ''}`;
+        messageDiv.innerHTML = `<strong>${type === 'user' ? '您' : 'AI助手'}：</strong><p>${message}</p>`;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    /**
+     * 切换AI对话面板
+     */
+    toggleAIChat(show) {
+        const panel = document.getElementById('ai-chat-panel');
+        if (show) {
+            panel.style.display = 'flex';
+        } else {
+            panel.style.display = 'none';
+        }
+    }
+
+    /**
+     * 显示AI结果对话框
+     */
+    showAIResultDialog(title, content) {
+        // 简单实现，后续可以优化为模态对话框
+        this.showAIReviewDialog({ summary: content });
+    }
+
+    /**
+     * 显示AI审核对话框
+     */
+    showAIReviewDialog(resultData) {
+        const dialog = document.createElement('div');
+        dialog.className = 'ai-result-panel show';
+        dialog.innerHTML = `
+            <div class="ai-result-content">
+                <h3>AI审核结果 ${resultData.totalScore ? `(总分: ${resultData.totalScore}/150)` : ''}</h3>
+                ${this.formatAIReviewResult(resultData)}
+                <div class="ai-result-actions">
+                    <button class="action-btn" onclick="this.closest('.ai-result-panel').remove()">关闭</button>
+                    ${resultData.issues ? '<button class="action-btn ai-optimize-btn" id="apply-ai-suggestions">应用建议</button>' : ''}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(dialog);
+
+        // 应用建议按钮
+        const applyBtn = dialog.querySelector('#apply-ai-suggestions');
+        if (applyBtn) {
+            applyBtn.addEventListener('click', () => {
+                this.applyAISuggestions(resultData);
+                dialog.remove();
+            });
+        }
+
+        // 点击背景关闭
+        dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) {
+                dialog.remove();
+            }
+        });
+    }
+
+    /**
+     * 格式化AI审核结果
+     */
+    formatAIReviewResult(resultData) {
+        let html = '';
+
+        if (resultData.scores) {
+            html += '<div class="ai-result-section">';
+            html += '<h4>评分详情</h4>';
+            for (const [category, score] of Object.entries(resultData.scores)) {
+                const categoryNames = {
+                    basicInfo: '基本信息',
+                    completeness: '内容完整性',
+                    technicality: '技术准确性',
+                    logic: '逻辑一致性',
+                    quality: '文档质量',
+                    format: '格式规范'
+                };
+                html += `<div class="ai-result-item">
+                    <strong>${categoryNames[category] || category}:</strong> ${score}/25
+                </div>`;
+            }
+            html += '</div>';
+        }
+
+        if (resultData.issues && resultData.issues.length > 0) {
+            html += '<div class="ai-result-section">';
+            html += '<h4>问题列表</h4>';
+            resultData.issues.forEach(issue => {
+                html += `<div class="ai-result-item ${issue.level}">
+                    <strong>[${issue.level}] ${issue.category}:</strong>
+                    <p>${issue.message}</p>
+                    ${issue.suggestion ? `<p><strong>建议:</strong> ${issue.suggestion}</p>` : ''}
+                </div>`;
+            });
+            html += '</div>';
+        }
+
+        if (resultData.summary) {
+            html += `<div class="ai-result-item suggestion">
+                <strong>总体评价:</strong>
+                <p>${resultData.summary}</p>
+            </div>`;
+        }
+
+        return html || '<p>无审核结果</p>';
+    }
+
+    /**
+     * 应用AI建议
+     */
+    applyAISuggestions(resultData) {
+        // TODO: 实现应用建议的逻辑
+        this.showToast('AI建议已应用', 'success');
     }
 }
 

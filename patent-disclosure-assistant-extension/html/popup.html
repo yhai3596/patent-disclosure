@@ -117,6 +117,25 @@
                     <button type="button" id="prev-step" class="nav-btn prev-btn" disabled>上一步</button>
                     <button type="button" id="next-step" class="nav-btn next-btn">下一步</button>
                     <button type="button" id="generate-doc" class="nav-btn generate-btn" style="display: none;">生成文档</button>
+                    <button type="button" id="ai-generate" class="nav-btn ai-btn" style="display: none;">AI智能生成</button>
+                </div>
+
+                <!-- AI对话助手（可选显示） -->
+                <div id="ai-chat-panel" class="ai-chat-panel" style="display: none;">
+                    <div class="ai-chat-header">
+                        <span>AI智能助手</span>
+                        <button type="button" id="close-ai-chat" class="close-btn">×</button>
+                    </div>
+                    <div id="ai-chat-messages" class="ai-chat-messages">
+                        <div class="ai-message">
+                            <strong>AI助手：</strong>
+                            <p>您好！我是专利撰写助手。请告诉我您想要申请专利的技术，我会引导您完成技术交底书的撰写。</p>
+                        </div>
+                    </div>
+                    <div class="ai-chat-input">
+                        <input type="text" id="ai-chat-input-field" placeholder="描述您的技术或提出问题...">
+                        <button type="button" id="ai-chat-send">发送</button>
+                    </div>
                 </div>
             </section>
 
@@ -125,6 +144,8 @@
                 <div class="preview-header">
                     <h3>文档预览</h3>
                     <div class="preview-actions">
+                        <button id="ai-optimize" class="action-btn ai-optimize-btn">AI优化</button>
+                        <button id="ai-review" class="action-btn ai-review-btn">AI审核</button>
                         <button id="edit-doc" class="action-btn edit-btn">编辑</button>
                         <button id="quality-check" class="action-btn quality-btn">质量检查</button>
                         <div class="dropdown">
@@ -161,29 +182,80 @@
             <!-- 设置标签页 -->
             <section id="settings-tab" class="tab-content">
                 <h3>设置</h3>
-                <div class="settings-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="auto-save" checked>
-                        <span class="checkmark"></span>
-                        自动保存
-                    </label>
-                    <p class="setting-desc">在输入时自动保存草稿</p>
+
+                <!-- AI功能设置 -->
+                <div class="settings-section">
+                    <h4>AI智能助手</h4>
+                    <div class="settings-group">
+                        <label for="ai-provider">AI服务提供商</label>
+                        <select id="ai-provider">
+                            <option value="zhipu">智谱AI (GLM-4)</option>
+                            <option value="qwen">通义千问 (Qwen)</option>
+                            <option value="deepseek">DeepSeek</option>
+                            <option value="kimi">Kimi (Moonshot)</option>
+                        </select>
+                        <p class="setting-desc">选择AI服务提供商，均提供免费额度</p>
+                    </div>
+                    <div class="settings-group">
+                        <label for="ai-model">模型选择</label>
+                        <select id="ai-model">
+                            <option value="glm-4-flash">GLM-4 Flash (快速)</option>
+                            <option value="glm-4-plus">GLM-4 Plus (强大)</option>
+                            <option value="glm-4-air">GLM-4 Air (平衡)</option>
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label for="ai-api-key">API Key *</label>
+                        <input type="password" id="ai-api-key" placeholder="请输入API Key">
+                        <p class="setting-desc">
+                            需要申请对应平台的API Key
+                            <a href="#" id="get-api-key" target="_blank">如何获取?</a>
+                        </p>
+                    </div>
+                    <div class="settings-group">
+                        <button id="test-ai" class="action-btn">测试连接</button>
+                        <span id="ai-status" class="ai-status"></span>
+                    </div>
+                    <div class="settings-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="ai-enabled" checked>
+                            <span class="checkmark"></span>
+                            启用AI智能助手
+                        </label>
+                        <p class="setting-desc">启用后可使用AI智能撰写和优化功能</p>
+                    </div>
                 </div>
-                <div class="settings-group">
-                    <label for="export-format">默认导出格式</label>
-                    <select id="export-format">
-                        <option value="markdown">Markdown (.md)</option>
-                        <option value="html">HTML (.html)</option>
-                    </select>
+
+                <hr class="settings-divider">
+
+                <!-- 基础设置 -->
+                <div class="settings-section">
+                    <h4>基础设置</h4>
+                    <div class="settings-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="auto-save" checked>
+                            <span class="checkmark"></span>
+                            自动保存
+                        </label>
+                        <p class="setting-desc">在输入时自动保存草稿</p>
+                    </div>
+                    <div class="settings-group">
+                        <label for="export-format">默认导出格式</label>
+                        <select id="export-format">
+                            <option value="markdown">Markdown (.md)</option>
+                            <option value="html">HTML (.html)</option>
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label for="template-select">文档模板</label>
+                        <select id="template-select">
+                            <option value="default">默认模板</option>
+                            <option value="detailed">详细模板</option>
+                            <option value="simple">简化模板</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="settings-group">
-                    <label for="template-select">文档模板</label>
-                    <select id="template-select">
-                        <option value="default">默认模板</option>
-                        <option value="detailed">详细模板</option>
-                        <option value="simple">简化模板</option>
-                    </select>
-                </div>
+
                 <div class="settings-actions">
                     <button id="clear-data" class="danger-btn">清除所有数据</button>
                     <button id="export-settings" class="action-btn">导出设置</button>
@@ -210,6 +282,7 @@
     <div id="toast" class="toast"></div>
 
     <script src="../js/performance.js"></script>
+    <script src="../js/ai-service.js"></script>
     <script src="../js/popup.js"></script>
 </body>
 </html>

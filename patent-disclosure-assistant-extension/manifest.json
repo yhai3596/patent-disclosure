@@ -9,7 +9,12 @@
     "activeTab",
     "contextMenus"
   ],
-  "host_permissions": [],
+  "host_permissions": [
+    "https://open.bigmodel.cn/*",
+    "https://dashscope.aliyuncs.com/*",
+    "https://api.deepseek.com/*",
+    "https://api.moonshot.cn/*"
+  ],
   "action": {
     "default_popup": "html/popup.html",
     "default_title": "专利技术交底书助手",
